@@ -1,0 +1,128 @@
+name: populate-lake
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  backfill-and-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Reset Glue tables and curated prefixes
+        run: |
+          set -euo pipefail
+          pip install -q pyyaml
+          python3 - <<'PY'
+          import yaml
+          c = yaml.safe_load(open("docs/lake-scope-contract.yaml"))
+          open("/tmp/ops_contract.env", "w").write(
+              f"ATHENA_DATABASE={c['athena_database']}\n"
+              f"CURATED_BUCKET={c['buckets']['curated']}\n"
+              f"VIEWS={' '.join(c['views'])}\n"
+              f"AWS_REGION={c['aws_region']}\n"
+          )
+          PY
+          set -a
+          # shellcheck disable=SC1091
+          source /tmp/ops_contract.env
+          set +a
+          for table in $(aws glue get-tables --database-name "$ATHENA_DATABASE" \
+            --query 'TableList[*].Name' --output text); do
+            echo "Deleting glue table $table"
+            aws glue delete-table --database-name "$ATHENA_DATABASE" --name "$table"
+          done
+          for view in $VIEWS; do
+            aws s3 rm "s3://${CURATED_BUCKET}/${view}/" --recursive || true
+          done
+
+      - name: Sync GitHub PAT to Secrets Manager
+        env:
+          OPSLAKE_GITHUB_PAT: ${{ secrets.OPSLAKE_GITHUB_PAT }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OPSLAKE_GITHUB_PAT}" ]; then
+            echo "::error::Set repo secret OPSLAKE_GITHUB_PAT (scopes: repo, read:org)."
+            exit 1
+          fi
+          aws secretsmanager put-secret-value \
+            --secret-id ops-lake/github-api-token \
+            --secret-string "$OPSLAKE_GITHUB_PAT"
+
+      - name: Backfill GitHub repos
+        run: |
+          set -euo pipefail
+          aws lambda invoke --function-name GithubBackfillFn \
+            --invocation-type Event \
+            --payload '{}' /tmp/backfill-invoke.json
+          echo "Waiting for GithubBackfillFn (async, up to 10m)..."
+          written=0
+          for _ in $(seq 1 40); do
+            msg=$(aws logs filter-log-events \
+              --log-group-name /aws/lambda/GithubBackfillFn \
+              --start-time $(($(date +%s)*1000-900000)) \
+              --filter-pattern "GithubBackfillFn written" \
+              --query 'events[-1].message' --output text 2>/dev/null || true)
+            if [ -n "$msg" ] && [ "$msg" != "None" ]; then
+              echo "$msg"
+              written=$(echo "$msg" | sed -n 's/.*written=\([0-9][0-9]*\).*/\1/p')
+              [ "${written:-0}" -gt 0 ] && break
+            fi
+            sleep 15
+          done
+          if [ "${written:-0}" -le 0 ]; then
+            echo "::error::Backfill wrote 0 objects or timed out — check OPSLAKE_GITHUB_PAT scopes."
+            exit 1
+          fi
+          echo "backfill written=${written}"
+
+      - name: Sync raw JSON to curated Parquet
+        run: |
+          pip install -q boto3 pyyaml
+          python3 scripts/sync_raw_to_curated.py
+
+      - name: Run Glue crawlers (one per contract view)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import yaml
+          c = yaml.safe_load(open("docs/lake-scope-contract.yaml"))
+          open("/tmp/ops_contract.env", "w").write(
+              f"ATHENA_DATABASE={c['athena_database']}\n"
+              f"VIEWS={' '.join(c['views'])}\n"
+          )
+          PY
+          set -a
+          # shellcheck disable=SC1091
+          source /tmp/ops_contract.env
+          set +a
+          for view in $VIEWS; do
+            aws glue start-crawler --name "${view}_crawler" || true
+          done
+          for view in $VIEWS; do
+            name="${view}_crawler"
+            while true; do
+              state=$(aws glue get-crawler --name "$name" --query 'Crawler.State' --output text 2>/dev/null || echo MISSING)
+              echo "crawler=$name state=$state"
+              [ "$state" = "READY" ] && break
+              [ "$state" = "MISSING" ] && break
+              sleep 15
+            done
+          done
+          echo "Glue tables:"
+          aws glue get-tables --database-name "$ATHENA_DATABASE" --query 'TableList[*].Name' --output text
+
+      - name: Athena proof (LIMIT 10 per view)
+        run: |
+          pip install -q pyyaml boto3
+          python3 scripts/create_athena_views.py

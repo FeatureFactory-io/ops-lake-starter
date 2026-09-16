@@ -1,0 +1,7 @@
+{
+  "name": "ops-lake-starter",
+  "private": true,
+  "devDependencies": {
+    "aws-cdk": "^2.170.0"
+  }
+}

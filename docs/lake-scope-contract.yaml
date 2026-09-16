@@ -1,0 +1,41 @@
+# Lake Scope Contract — fill before cdk deploy.
+# ci is XOR: github_actions OR gitlab_ci, matching host.
+
+org: YOUR_ORG
+host: github                    # github | gitlab
+sources:
+  - github                      # subset of: github, gitlab, jira
+github_entities:
+  - commits
+  - pull_requests
+  - issues
+  - workflow_runs
+  - project_items
+github_projects: []             # fill from Projects v2; empty if none
+repos: []                       # org repo names in scope
+ci: github_actions              # github_actions XOR gitlab_ci
+lake_repo: ops-lake-starter
+# DeployStack trusts this name-only sub AND repo:{org}@*/{lake_repo}@*:*
+oidc_sub: repo:YOUR_ORG/ops-lake-starter:*
+aws_account: "000000000000"
+aws_region: us-east-1
+env: sandbox                    # sandbox | dev | staging | prod
+lake_name: ops-lake
+athena_database: ops_catalog
+athena_workgroup: ops-lake-analysts
+views:                          # derived as {source}_{entity}; STEP 2 creates exactly these
+  - github_commits
+  - github_pull_requests
+  - github_issues
+  - github_workflow_runs
+  - github_project_items
+buckets:
+  raw: ops-lake-raw-000000
+  curated: ops-lake-curated-000000
+  athena_results: ops-lake-athena-results-000000
+paths:
+  raw: "s3://{raw}/{source}/{yyyy}/{mm}/{dd}/{event-id}.json"
+  curated: "s3://{curated}/{table}/source={source}/dt={yyyy-mm-dd}/part-{uuid}.parquet"
+secrets:
+  github_webhook: ops-lake/github-webhook-secret
+  github_api_token: ops-lake/github-api-token

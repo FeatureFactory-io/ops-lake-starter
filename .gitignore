@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.cdk.staging/
+cdk.out/
+node_modules/
+tests.log
+.DS_Store
+*.egg-info/
+.pytest_cache/
+.streamlit/secrets.toml

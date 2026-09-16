@@ -1,0 +1,18 @@
+# Post-deploy manifest — fill after first `cdk deploy --all` via GitHub Actions.
+
+aws_account: "000000000000"
+aws_region: us-east-1
+env: sandbox
+stacks:
+  - OpsLakeDeploy
+  - OpsLakeIngestion
+  - OpsLakeCatalog
+  - OpsLakeEda
+deploy_role_arn: ""             # OpsLakeDeploy output DeployRoleArn
+github_webhook_url: ""          # OpsLakeIngestion output GithubWebhookUrl
+secrets:
+  github_webhook: ops-lake/github-webhook-secret
+  github_api_token: ops-lake/github-api-token
+athena_database: ops_catalog
+athena_workgroup: ops-lake-analysts
+streamlit_mart_url: ""          # OpsLakeEda output StreamlitMartUrl

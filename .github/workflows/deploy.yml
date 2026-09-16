@@ -1,0 +1,71 @@
+name: deploy-ops-lake
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  synth-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -r requirements.txt
+
+      - name: Unit tests (synth; tests pass skip_bundling context)
+        run: pytest tests/unit -q
+
+      - name: Log OIDC token claims
+        run: |
+          set -euo pipefail
+          TOKEN=$(curl -s -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
+          python3 -c "import json,base64,sys; t=sys.argv[1]; p=t.split('.')[1]+'=='; c=json.loads(base64.urlsafe_b64decode(p)); print('OIDC sub:', c.get('sub')); print('OIDC aud:', c.get('aud'))" "$TOKEN"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: CDK deploy all stacks
+        run: npx cdk deploy --all --require-approval never
+        # Stacks: OpsLakeDeploy, OpsLakeIngestion, OpsLakeCatalog, OpsLakeEda
+        # OpsLakeEda builds streamlit/Dockerfile (linux/amd64) on ECS Fargate + ALB.
+
+      - name: Verify Streamlit task role can read curated lake
+        run: |
+          set -euo pipefail
+          ROLE=$(aws iam list-roles --query "Roles[?contains(RoleName,'StreamlitTaskRole')].Arn | [0]" --output text)
+          BUCKET=$(python3 -c "import yaml; print(yaml.safe_load(open('docs/lake-scope-contract.yaml'))['buckets']['curated'])")
+          for action in s3:ListBucket s3:GetObject; do
+            result=$(aws iam simulate-principal-policy \
+              --policy-source-arn "$ROLE" \
+              --action-names "$action" \
+              --resource-arns "arn:aws:s3:::${BUCKET}" "arn:aws:s3:::${BUCKET}/*" \
+              --query 'EvaluationResults[0].EvalDecision' --output text)
+            echo "$action -> $result"
+            [ "$result" = "allowed" ] || exit 1
+          done
+
+      - name: Publish deploy outputs
+        run: |
+          echo "## OpsLakeIngestion" >> "$GITHUB_STEP_SUMMARY"
+          aws cloudformation describe-stacks --stack-name OpsLakeIngestion \
+            --query 'Stacks[0].Outputs' --output table >> "$GITHUB_STEP_SUMMARY"
+          echo "## OpsLakeEda (Streamlit mart URL)" >> "$GITHUB_STEP_SUMMARY"
+          aws cloudformation describe-stacks --stack-name OpsLakeEda \
+            --query 'Stacks[0].Outputs' --output table >> "$GITHUB_STEP_SUMMARY" || true
