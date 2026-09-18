@@ -1,0 +1,33 @@
+# Activity 248. Assumed unless label is measured. Not unique GitHub authors.
+# Example numbers are fake so intern can see the arithmetic.
+roles:
+  - stage_id: biz
+    role: product
+    people_in_role: 2
+    people_downstream: 8
+    label: assumed
+    source: "Eng manager, 2026-01 standup"
+  - stage_id: dev
+    role: author
+    people_in_role: 4
+    people_downstream: 6
+    label: assumed
+    source: "Eng manager, 2026-01 standup"
+  - stage_id: test
+    role: tester
+    people_in_role: 2
+    people_downstream: 4
+    label: assumed
+    source: "QA lead"
+  - stage_id: sec
+    role: reviewer
+    people_in_role: 1
+    people_downstream: 8
+    label: assumed
+    source: "Security champion"
+  - stage_id: ops
+    role: integrator
+    people_in_role: 1
+    people_downstream: 8
+    label: assumed
+    source: "Release owner"

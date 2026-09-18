@@ -1,0 +1,32 @@
+# Activity 248. touch_time and wait_time in hours (sample).
+# wall_clock = touch + wait
+# effort = people_in_role × touch_time
+# impact = effort + (people_downstream × wait_time)
+# toc_rank_1 marks the Theory-of-Constraints bottleneck.
+unit: hours
+stages:
+  - stage_id: biz
+    touch_time: 8
+    wait_time: 40
+    query_execution_id: ""
+    toc_rank_1: false
+  - stage_id: dev
+    touch_time: 16
+    wait_time: 24
+    query_execution_id: ""
+    toc_rank_1: false
+  - stage_id: test
+    touch_time: 6
+    wait_time: 12
+    query_execution_id: ""
+    toc_rank_1: false
+  - stage_id: sec
+    touch_time: 2
+    wait_time: 48
+    query_execution_id: ""
+    toc_rank_1: true
+  - stage_id: ops
+    touch_time: 4
+    wait_time: 8
+    query_execution_id: ""
+    toc_rank_1: false

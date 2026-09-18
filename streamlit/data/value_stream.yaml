@@ -1,0 +1,45 @@
+# Activity 247. Drop a row if its view is not in docs/lake-scope-contract.yaml views.
+# Join on issue/PR number — never timestamps or repo alone.
+# github_project_items is a heartbeat until GraphQL pagination ships — do not use as Biz.
+stages:
+  - id: biz
+    name: Biz
+    view: github_issues
+    start_column: "$.payload.created_at"
+    end_column: "$.payload.closed_at"
+    join_key: issue_number
+    notes: Feature-type issues only (skill Value Stream recipe 4).
+    query_execution_id: ""
+  - id: dev
+    name: Dev
+    view: github_pull_requests
+    start_column: "$.payload.created_at"
+    end_column: "$.payload.merged_at"
+    join_key: "Closes #N"
+    notes: Commits in window from github_commits.
+    query_execution_id: ""
+  - id: test
+    name: Test
+    view: github_workflow_runs
+    start_column: "$.payload.run_started_at"
+    end_column: "$.payload.conclusion=success"
+    join_key: head_sha
+    notes: First successful run after the PR.
+    query_execution_id: ""
+  - id: sec
+    name: Sec
+    view: github_workflow_runs
+    start_column: "security-gate job start"
+    end_column: "security-gate job complete"
+    join_key: run_id
+    notes: Dedicated scan workflow if named in the contract; else a job in Test run.
+    query_execution_id: ""
+  - id: ops
+    name: Ops
+    view: github_workflow_runs
+    start_column: "deploy run start"
+    end_column: "deploy run complete"
+    join_key: run_id
+    notes: Deploy workflow name from contract.
+    query_execution_id: ""
+# gitlab/jira: copy blocks from skill Value Stream only if those views exist.

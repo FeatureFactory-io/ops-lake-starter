@@ -39,3 +39,10 @@ paths:
 secrets:
   github_webhook: ops-lake/github-webhook-secret
   github_api_token: ops-lake/github-api-token
+# If jira is in sources, add (skill Scope the Operations Lake → Jira flow keys):
+# jira_project_keys: []
+# jira_entities: [issues, status_segments]
+# started_statuses: []   # cycle-time start set for THIS org
+# jira_edition: cloud    # cloud | server
+# secrets.jira_api_token: ops-lake/jira-api-token
+# views += jira_issues, jira_status_segments

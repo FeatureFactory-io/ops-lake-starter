@@ -1,0 +1,31 @@
+# Activity 248. Opportunity names, not agent products.
+# Low-hanging fruit = high impact AND ai_can_help=yes AND effort in {S, M}.
+opportunities:
+  - id: 1
+    name: PR review wait
+    stage_id: sec
+    ai_can_help: yes
+    effort: S
+    expected_gain: XL
+    notes: Queue before the security-gate job starts.
+  - id: 2
+    name: Spec idle before first commit
+    stage_id: biz
+    ai_can_help: unknown
+    effort: M
+    expected_gain: L
+    notes: Wait after issue open; may be policy not a model.
+  - id: 3
+    name: Deploy workflow duration
+    stage_id: ops
+    ai_can_help: no
+    effort: L
+    expected_gain: S
+    notes: Mechanical but already automated; leave it.
+  - id: 4
+    name: Test flake triage
+    stage_id: test
+    ai_can_help: yes
+    effort: M
+    expected_gain: M
+    notes: Only if Test is not a cheap non-constraint.

@@ -1,0 +1,7 @@
+# Keep in sync with docs/lake-scope-contract.yaml views (Docker context is streamlit/).
+views:
+  - github_commits
+  - github_pull_requests
+  - github_issues
+  - github_workflow_runs
+  - github_project_items

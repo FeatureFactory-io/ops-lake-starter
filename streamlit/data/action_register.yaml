@@ -1,0 +1,43 @@
+# Activity 249. Multi-tag allowed. Classification is not disposal.
+# Routes: drop | process_tooling | ai_sdlc | team_upskill_engine | staffing
+rows:
+  - rank: 1
+    stage_id: sec
+    finding: Security-gate wait dominates impact; one reviewer, eight people downstream.
+    decision: automate
+    rationale: Eliminate is no — the gate must stay. Encode the checklist in a Lambda + Guardrail.
+    cause_tags: [dE, dK]
+    routes:
+      dE: ai_sdlc
+      dK: team_upskill_engine
+    clock: wait_hours
+    unit: hours
+    n: 42
+    role: reviewer
+    query_execution_id: ""
+  - rank: 2
+    stage_id: biz
+    finding: Issue sits idle after open; authors know the next step but the board policy blocks start.
+    decision: eliminate
+    rationale: Duplicate intake queue. People know the right move; the environment punishes it — dE not dK.
+    cause_tags: [dE]
+    routes:
+      dE: drop
+    clock: wait_hours
+    unit: hours
+    n: 18
+    role: product
+    query_execution_id: ""
+  - rank: 3
+    stage_id: ops
+    finding: Single integrator on merge-to-prod.
+    decision: delegate
+    rationale: Judgment on go/no-go remains; Guardrail cannot encode it.
+    cause_tags: [dI]
+    routes:
+      dI: staffing
+    clock: wait_hours
+    unit: hours
+    n: 12
+    role: integrator
+    query_execution_id: ""

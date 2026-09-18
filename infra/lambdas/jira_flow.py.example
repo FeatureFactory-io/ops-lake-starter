@@ -1,0 +1,43 @@
+"""Jira flow extract — copy to jira_flow.py only if sources includes jira.
+
+Implements skill Jira Flow Extract → Extraction recipe:
+issue snapshots (closed_at = resolutiondate) plus status segments.
+Do not invent a different clock. Poller current-status is not this file.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+
+def handler(event: dict[str, Any], context: object) -> dict[str, Any]:
+    """
+    Placeholder Lambda entry. Replace with the Jira Flow Extract recipe.
+
+    :param event: EventBridge or backfill payload as dict. Example: {"source": "jira"}
+    :param context: Lambda context. Example: object()
+    :return: status dict. Example: {"ok": True}
+    :raises NotImplementedError: until copied and filled for a jira-scoped lake
+    """
+    logger.info("Jira flow extract stub invoked event_keys=%s", list(event))
+    raise NotImplementedError(
+        "Copy this file to infra/lambdas/jira_flow.py and implement skill "
+        "Jira Flow Extract → Extraction recipe (JQL, changelog field==status, "
+        "Started set from the Scope Contract)."
+    )
+
+
+def build_status_segments(changelog: list[dict[str, Any]], created_at: str) -> list[dict[str, str]]:
+    """
+    Build contiguous status visits from changelog items.
+
+    :param changelog: Jira histories as list[dict]. Example: [{"items": [{"field": "status"}]}]
+    :param created_at: issue created timestamp as str. Example: "2026-01-01T00:00:00.000+0000"
+    :return: segments. Example: [{"status": "To Do", "entered_at": created_at, "exited_at": "..."}]
+    """
+    logger.info("build_status_segments changelog_len=%s", len(changelog))
+    return []

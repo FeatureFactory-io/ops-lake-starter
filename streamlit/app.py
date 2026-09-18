@@ -15,13 +15,15 @@ st.caption(f"Athena {DATABASE} · workgroup {WORKGROUP} · region {REGION}")
 
 st.markdown(
     """
-Use the sidebar to navigate:
+Story (in order):
 
-- **Feature Cycle Time** — median hours to complete feature-type issues, split into
-  BPE phases (Plan / Build / Test / Finalize), week-over-week for the last 12 weeks,
-  with project filter.
-- **Lake Explorer** — sample rows from curated contract views.
+1. **Delivery cycle** — effort, wall-clock, impact on every stage
+2. **Opportunity quadrant** — gain vs effort (opportunity names, not agents)
+3. **Deficiency register** — dE / dK / dI + routes
+4. **Stage detail** — only promoted EDA
+5. **Tabs** — Commits, Work items, Changes, Pipelines, Load, Defects, Sprints (skip if views missing)
+
+Look-until-trusted workspace (not the opening): Feature Cycle Time, Lake Explorer.
 """
 )
-
-st.info("Start with **Feature Cycle Time** for the end-to-end delivery picture.")
+st.info("Start with **Delivery cycle**, then the quadrant. Do not lead with Feature Cycle Time or Commits.")

@@ -1,0 +1,41 @@
+# GitLab CI OIDC deploy — copy to `.gitlab-ci.yml` only when
+# docs/lake-scope-contract.yaml `ci` is `gitlab_ci`.
+# Do not run this and GitHub Actions deploy.yml against the same AWS account.
+
+stages:
+  - test
+  - deploy
+
+variables:
+  AWS_REGION: us-east-1
+
+pytest:
+  stage: test
+  image: python:3.12
+  script:
+    - pip install -r requirements.txt
+    - pytest tests/unit -q
+
+deploy:
+  stage: deploy
+  image: python:3.12
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+  environment: production
+  when: manual
+  script:
+    - pip install -r requirements.txt
+    - |
+      aws sts assume-role-with-web-identity \
+        --role-arn "$AWS_DEPLOY_ROLE_ARN" \
+        --role-session-name gitlab-deploy \
+        --web-identity-token "$GITLAB_OIDC_TOKEN" \
+        --duration-seconds 3600
+    - cdk synth
+    - cdk diff
+    - cdk deploy --all --require-approval never
+  # CI/CD variable AWS_DEPLOY_ROLE_ARN = IAM role minted once from a laptop
+  # (cdk bootstrap + cdk deploy OpsLakeDeploy). Never AWS_ACCESS_KEY_ID.

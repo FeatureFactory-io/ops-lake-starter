@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY .streamlit .streamlit
 COPY *.py .
 COPY pages pages/
+COPY data data/
 
 EXPOSE 8501
 
